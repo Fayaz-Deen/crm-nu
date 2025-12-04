@@ -202,6 +202,7 @@ public class GoogleAuthService {
                 .profilePicture(userInfo.picture)
                 .timezone(java.util.TimeZone.getDefault().getID())
                 .settings("{\"birthdayReminderDays\":2,\"anniversaryReminderDays\":2,\"defaultFollowupDays\":7,\"theme\":\"system\",\"notificationPrefs\":{\"push\":true,\"email\":true}}")
+                .emailVerified(true) // Google already verifies emails
                 .build();
 
         user = userRepository.save(user);
