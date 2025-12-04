@@ -38,6 +38,7 @@ backend/mvnw.cmd
 .env.*
 !.env.example
 !.env.*.example
+!.env.production
 
 # OS files
 Thumbs.db
