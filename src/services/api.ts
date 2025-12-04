@@ -1,7 +1,7 @@
 import type { AuthResponse, Contact, Meeting, User, Reminder, Task, TaskStats, Tag, ContactGroup, CalendarEvent, Activity } from '../types';
 import { useAuthStore } from '../store/authStore';
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 class ApiClient {
   private async request<T>(
