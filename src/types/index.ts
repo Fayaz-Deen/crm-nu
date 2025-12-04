@@ -5,6 +5,7 @@ export interface User {
   profilePicture?: string;
   timezone: string;
   settings: UserSettings;
+  emailVerified?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

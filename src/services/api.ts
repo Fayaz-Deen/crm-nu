@@ -94,6 +94,12 @@ export const authApi = {
   googleAuth: (params: { code?: string; idToken?: string; redirectUri?: string }) =>
     api.post<AuthResponse>('/auth/google', params),
 
+  verifyEmail: (token: string) =>
+    api.post<{ message: string }>('/auth/verify-email', { token }),
+
+  resendVerification: (email: string) =>
+    api.post<{ message: string }>('/auth/resend-verification', { email }),
+
   forgotPassword: (email: string) =>
     api.post<{ message: string }>('/auth/forgot-password', { email }),
 

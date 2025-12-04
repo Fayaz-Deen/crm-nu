@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -23,11 +24,12 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final TemplateService templateService;
+    private final EmailService emailService;
 
     public AuthService(UserRepository userRepository, ContactRepository contactRepository,
                        MeetingRepository meetingRepository, ReminderRepository reminderRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService,
-                       TemplateService templateService) {
+                       TemplateService templateService, EmailService emailService) {
         this.userRepository = userRepository;
         this.contactRepository = contactRepository;
         this.meetingRepository = meetingRepository;
@@ -35,6 +37,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.templateService = templateService;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -43,17 +46,69 @@ public class AuthService {
             throw new RuntimeException("Email already exists");
         }
 
+        // Generate verification token
+        String verificationToken = UUID.randomUUID().toString();
+        LocalDateTime tokenExpiry = LocalDateTime.now().plusHours(24);
+
         User user = User.builder()
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .timezone(java.util.TimeZone.getDefault().getID())
                 .settings("{\"birthdayReminderDays\":2,\"anniversaryReminderDays\":2,\"defaultFollowupDays\":7,\"theme\":\"system\",\"notificationPrefs\":{\"push\":true,\"email\":true}}")
+                .emailVerified(false)
+                .verificationToken(verificationToken)
+                .verificationTokenExpiry(tokenExpiry)
                 .build();
 
         user = userRepository.save(user);
         templateService.createDefaultTemplates(user.getId());
+
+        // Send verification email
+        emailService.sendVerificationEmail(user.getEmail(), user.getName(), verificationToken);
+
         return createAuthResponse(user);
+    }
+
+    /**
+     * Verify user's email address.
+     */
+    @Transactional
+    public void verifyEmail(String token) {
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid verification token"));
+
+        if (user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Verification token has expired");
+        }
+
+        user.setEmailVerified(true);
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiry(null);
+        userRepository.save(user);
+    }
+
+    /**
+     * Resend verification email.
+     */
+    @Transactional
+    public void resendVerificationEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.isEmailVerified()) {
+            throw new RuntimeException("Email is already verified");
+        }
+
+        // Generate new verification token
+        String verificationToken = UUID.randomUUID().toString();
+        LocalDateTime tokenExpiry = LocalDateTime.now().plusHours(24);
+
+        user.setVerificationToken(verificationToken);
+        user.setVerificationTokenExpiry(tokenExpiry);
+        userRepository.save(user);
+
+        emailService.sendVerificationEmail(user.getEmail(), user.getName(), verificationToken);
     }
 
     public AuthResponse login(AuthRequest request) {

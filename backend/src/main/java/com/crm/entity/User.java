@@ -26,6 +26,11 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String settings;
 
+    // Email verification fields
+    private boolean emailVerified = false;
+    private String verificationToken;
+    private LocalDateTime verificationTokenExpiry;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
@@ -50,6 +55,12 @@ public class User {
     public void setTimezone(String timezone) { this.timezone = timezone; }
     public String getSettings() { return settings; }
     public void setSettings(String settings) { this.settings = settings; }
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+    public String getVerificationToken() { return verificationToken; }
+    public void setVerificationToken(String verificationToken) { this.verificationToken = verificationToken; }
+    public LocalDateTime getVerificationTokenExpiry() { return verificationTokenExpiry; }
+    public void setVerificationTokenExpiry(LocalDateTime verificationTokenExpiry) { this.verificationTokenExpiry = verificationTokenExpiry; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
@@ -64,6 +75,9 @@ public class User {
         public Builder settings(String s) { user.settings = s; return this; }
         public Builder profilePicture(String p) { user.profilePicture = p; return this; }
         public Builder googleId(String g) { user.googleId = g; return this; }
+        public Builder emailVerified(boolean v) { user.emailVerified = v; return this; }
+        public Builder verificationToken(String t) { user.verificationToken = t; return this; }
+        public Builder verificationTokenExpiry(LocalDateTime e) { user.verificationTokenExpiry = e; return this; }
         public User build() { return user; }
     }
 }

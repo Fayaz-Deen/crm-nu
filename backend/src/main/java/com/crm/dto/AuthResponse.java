@@ -22,6 +22,7 @@ public class AuthResponse {
         private String profilePicture;
         private String timezone;
         private String settings;
+        private boolean emailVerified;
 
         public String getId() { return id; }
         public void setId(String id) { this.id = id; }
@@ -35,6 +36,8 @@ public class AuthResponse {
         public void setTimezone(String t) { this.timezone = t; }
         public String getSettings() { return settings; }
         public void setSettings(String s) { this.settings = s; }
+        public boolean isEmailVerified() { return emailVerified; }
+        public void setEmailVerified(boolean v) { this.emailVerified = v; }
 
         public static UserDto from(User user) {
             UserDto dto = new UserDto();
@@ -44,6 +47,7 @@ public class AuthResponse {
             dto.setProfilePicture(user.getProfilePicture());
             dto.setTimezone(user.getTimezone());
             dto.setSettings(user.getSettings());
+            dto.setEmailVerified(user.isEmailVerified());
             return dto;
         }
     }

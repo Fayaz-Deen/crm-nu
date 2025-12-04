@@ -41,7 +41,7 @@ public class SecurityConfig {
                 .antMatchers("/h2-console/**").permitAll()
                 .antMatchers("/api/health").permitAll()
                 .antMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs.yaml").permitAll()
-                .antMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/forgot-password", "/api/auth/google").permitAll()
+                .antMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/forgot-password", "/api/auth/google", "/api/auth/verify-email", "/api/auth/resend-verification").permitAll()
                 .antMatchers("/api/**").authenticated()
                 .anyRequest().permitAll()
             .and()

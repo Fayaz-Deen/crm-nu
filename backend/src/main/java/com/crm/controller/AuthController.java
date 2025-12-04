@@ -100,6 +100,24 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
     }
 
+    /**
+     * Verify email address using token from verification email.
+     */
+    @PostMapping("/verify-email")
+    public ResponseEntity<Map<String, String>> verifyEmail(@RequestBody Map<String, String> body) {
+        authService.verifyEmail(body.get("token"));
+        return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
+    }
+
+    /**
+     * Resend verification email.
+     */
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Map<String, String>> resendVerification(@RequestBody Map<String, String> body) {
+        authService.resendVerificationEmail(body.get("email"));
+        return ResponseEntity.ok(Map.of("message", "Verification email sent"));
+    }
+
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> body) {
         authService.initiatePasswordReset(body.get("email"));
