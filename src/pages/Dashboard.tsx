@@ -529,11 +529,12 @@ export function Dashboard() {
       <div className={`grid gap-6 ${recentlyViewed.length > 0 ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
         {/* Recently Viewed */}
         {recentlyViewed.length > 0 && (
-          <Card variant="elevated" className="p-4 sm:p-6 h-fit">
-            <div className="flex items-center gap-2 mb-4">
-              <Eye className="h-5 w-5 text-[hsl(var(--primary))]" />
-              <h3 className="font-semibold">Recently Viewed</h3>
-            </div>
+          <CollapsibleSection
+            title="Recently Viewed"
+            icon={Eye}
+            count={recentlyViewed.length}
+            defaultOpen={true}
+          >
             <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
               {recentlyViewed.map((contact) => (
                 <Link
@@ -548,17 +549,20 @@ export function Dashboard() {
                 </Link>
               ))}
             </div>
-          </Card>
+          </CollapsibleSection>
         )}
 
         {/* Activity Feed */}
-        <Card variant="elevated" className={`p-4 sm:p-6 ${recentlyViewed.length === 0 ? 'max-w-2xl' : ''}`}>
-          <div className="flex items-center gap-2 mb-4">
-            <ActivityIcon className="h-5 w-5 text-[hsl(var(--primary))]" />
-            <h3 className="font-semibold">Recent Activity</h3>
-          </div>
-          <ActivityFeed activities={activities} />
-        </Card>
+        <div className={recentlyViewed.length === 0 ? 'max-w-2xl' : ''}>
+          <CollapsibleSection
+            title="Recent Activity"
+            icon={ActivityIcon}
+            count={activities.length}
+            defaultOpen={true}
+          >
+            <ActivityFeed activities={activities} />
+          </CollapsibleSection>
+        </div>
       </div>
 
       {/* Stats Grid */}
