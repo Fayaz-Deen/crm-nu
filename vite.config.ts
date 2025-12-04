@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'logo.gif', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
         name: 'Nu-Connect',
@@ -43,6 +43,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,gif,svg,woff2}'],
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/api\//],
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /^https?:\/\/.*\/api\/.*/i,
@@ -60,7 +63,29 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /\.(?:png|gif|jpg|jpeg|svg|ico)$/,
+            urlPattern: /\.(?:css)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'css-cache',
+              expiration: {
+                maxEntries: 30,
+                maxAgeSeconds: 7 * 24 * 60 * 60
+              }
+            }
+          },
+          {
+            urlPattern: /\.(?:js)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'js-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 7 * 24 * 60 * 60
+              }
+            }
+          },
+          {
+            urlPattern: /\.(?:png|gif|jpg|jpeg|svg|ico|webp)$/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'images-cache',
@@ -71,7 +96,7 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /\.(?:woff|woff2|ttf|eot)$/,
+            urlPattern: /\.(?:woff|woff2|ttf|eot)$/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'fonts-cache',
