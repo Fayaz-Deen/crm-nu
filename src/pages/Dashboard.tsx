@@ -526,23 +526,23 @@ export function Dashboard() {
       <QuickActions />
 
       {/* Recently Viewed & Activity Feed */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className={`grid gap-6 ${recentlyViewed.length > 0 ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
         {/* Recently Viewed */}
         {recentlyViewed.length > 0 && (
-          <Card variant="elevated" className="p-4 sm:p-6">
+          <Card variant="elevated" className="p-4 sm:p-6 h-fit">
             <div className="flex items-center gap-2 mb-4">
               <Eye className="h-5 w-5 text-[hsl(var(--primary))]" />
               <h3 className="font-semibold">Recently Viewed</h3>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
               {recentlyViewed.map((contact) => (
                 <Link
                   key={contact.id}
                   to={`/contacts/${contact.id}`}
-                  className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[hsl(var(--muted))]/50 hover:bg-[hsl(var(--muted))] transition-colors min-w-[80px] group"
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[hsl(var(--muted))]/50 hover:bg-[hsl(var(--muted))] transition-colors min-w-[80px] shrink-0 group"
                 >
                   <Avatar src={contact.profilePicture} name={contact.name} size="md" />
-                  <span className="text-xs font-medium text-center truncate w-full group-hover:text-[hsl(var(--primary))]">
+                  <span className="text-xs font-medium text-center truncate w-full max-w-[70px] group-hover:text-[hsl(var(--primary))]">
                     {contact.name.split(' ')[0]}
                   </span>
                 </Link>
@@ -552,7 +552,7 @@ export function Dashboard() {
         )}
 
         {/* Activity Feed */}
-        <Card variant="elevated" className="p-4 sm:p-6">
+        <Card variant="elevated" className={`p-4 sm:p-6 ${recentlyViewed.length === 0 ? 'max-w-2xl' : ''}`}>
           <div className="flex items-center gap-2 mb-4">
             <ActivityIcon className="h-5 w-5 text-[hsl(var(--primary))]" />
             <h3 className="font-semibold">Recent Activity</h3>
