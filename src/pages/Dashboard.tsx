@@ -101,14 +101,15 @@ const CollapsibleSection = ({
   );
 };
 
-const StatCard = ({ icon: Icon, label, value, color, trend }: {
+const StatCard = ({ icon: Icon, label, value, color, trend, to }: {
   icon: typeof Users;
   label: string;
   value: number;
   color: string;
   trend?: number;
-}) => (
-  <Card className="hover-lift group cursor-default">
+  to?: string;
+}) => {
+  const content = (
     <div className="flex items-center gap-4 p-5">
       <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${color} transition-transform group-hover:scale-110`}>
         <Icon className="h-7 w-7" />
@@ -124,8 +125,24 @@ const StatCard = ({ icon: Icon, label, value, color, trend }: {
         </div>
       )}
     </div>
-  </Card>
-);
+  );
+
+  if (to) {
+    return (
+      <Link to={to}>
+        <Card className="hover-lift group cursor-pointer">
+          {content}
+        </Card>
+      </Link>
+    );
+  }
+
+  return (
+    <Card className="hover-lift group cursor-default">
+      {content}
+    </Card>
+  );
+};
 
 // Quick Actions Component
 const QuickActions = () => {
@@ -296,24 +313,28 @@ export function Dashboard() {
           label="Total Contacts"
           value={stats?.totalContacts || 0}
           color="bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400"
+          to="/contacts"
         />
         <StatCard
           icon={Calendar}
           label="Meetings This Month"
           value={stats?.meetingsThisMonth || 0}
           color="bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400"
+          to="/calendar"
         />
         <StatCard
           icon={Gift}
           label="Upcoming Birthdays"
           value={stats?.upcomingBirthdays?.length || 0}
           color="bg-pink-100 dark:bg-pink-900/50 text-pink-600 dark:text-pink-400"
+          to="/contacts?filter=birthdays"
         />
         <StatCard
           icon={Clock}
           label="Pending Follow-ups"
           value={stats?.pendingFollowups?.length || 0}
           color="bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400"
+          to="/tasks"
         />
       </div>
 
