@@ -122,23 +122,23 @@ export function Sidebar() {
           </div>
 
           {/* User section */}
-          <div className="border-t border-[hsl(var(--border))] p-4">
+          <div className="border-t border-[hsl(var(--border))] p-4 space-y-3">
             <div className="flex items-center gap-3 rounded-xl bg-[hsl(var(--accent))] p-3">
               <Avatar src={user?.profilePicture} name={user?.name || 'User'} size="md" />
               <div className="flex-1 overflow-hidden">
-                <p className="truncate text-sm font-semibold">{user?.name}</p>
+                <p className="truncate text-sm font-semibold">{user?.name || 'User'}</p>
                 <p className="truncate text-xs text-[hsl(var(--muted-foreground))]">
-                  {user?.email}
+                  {user?.email || 'No email'}
                 </p>
               </div>
-              <button
-                onClick={handleLogout}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-all hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
-                title="Logout"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
             </div>
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-[hsl(var(--destructive))] bg-[hsl(var(--destructive))]/10 transition-all hover:bg-[hsl(var(--destructive))]/20 active:scale-[0.98]"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sign out</span>
+            </button>
           </div>
         </div>
       </aside>

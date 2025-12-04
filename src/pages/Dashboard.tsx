@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Calendar, Gift, Clock, AlertCircle, TrendingUp, ArrowUpRight, Sparkles, ChevronDown } from 'lucide-react';
-import { Card, Avatar, Badge } from '../components/ui';
+import { Users, Calendar, Gift, Clock, AlertCircle, TrendingUp, ArrowUpRight, Sparkles, ChevronDown, BarChart3 } from 'lucide-react';
+import { Card, Avatar, Badge, Skeleton, SkeletonStatCard, SkeletonListItem } from '../components/ui';
 import { dashboardApi } from '../services/api';
 import { formatRelative, formatBirthday, getDaysUntil } from '../utils/dates';
 import type { Contact, Meeting } from '../types';
@@ -19,6 +19,29 @@ interface DashboardStats {
 }
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+
+// Fallback data for empty charts
+const FALLBACK_MEETINGS_CHART = [
+  { week: 'Week 1', count: 0 },
+  { week: 'Week 2', count: 0 },
+  { week: 'Week 3', count: 0 },
+  { week: 'Week 4', count: 0 },
+];
+
+const FALLBACK_CONTACTS_OVER_TIME = [
+  { month: 'Jan', count: 0 },
+  { month: 'Feb', count: 0 },
+  { month: 'Mar', count: 0 },
+  { month: 'Apr', count: 0 },
+  { month: 'May', count: 0 },
+  { month: 'Jun', count: 0 },
+];
+
+const FALLBACK_MEDIUM_BREAKDOWN = [
+  { medium: 'Email', count: 0 },
+  { medium: 'Phone', count: 0 },
+  { medium: 'In Person', count: 0 },
+];
 
 // Collapsible section component for mobile-friendly analytics
 const CollapsibleSection = ({
@@ -134,12 +157,56 @@ export function Dashboard() {
     fetchData();
   }, []);
 
+  // Use fallback data if API returns empty arrays
+  const chartMeetings = meetingsChart.length > 0 ? meetingsChart : FALLBACK_MEETINGS_CHART;
+  const chartContacts = contactsOverTime.length > 0 ? contactsOverTime : FALLBACK_CONTACTS_OVER_TIME;
+  const chartMedium = mediumBreakdown.length > 0 ? mediumBreakdown : FALLBACK_MEDIUM_BREAKDOWN;
+
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-[hsl(var(--primary))] border-t-transparent" />
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">Loading dashboard...</p>
+      <div className="space-y-8 animate-fade-in">
+        {/* Header Skeleton */}
+        <div className="space-y-2">
+          <Skeleton width={100} height={20} />
+          <Skeleton width={250} height={32} />
+          <Skeleton width={300} height={16} />
+        </div>
+
+        {/* Stats Grid Skeleton */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <SkeletonStatCard key={i} />
+          ))}
+        </div>
+
+        {/* Chart Skeleton */}
+        <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Skeleton variant="circular" width={20} height={20} />
+            <Skeleton height={20} width="30%" />
+          </div>
+          <div className="h-56 flex items-end justify-around gap-3 pt-4">
+            {[40, 65, 45, 80, 55, 70].map((h, i) => (
+              <Skeleton key={i} variant="rounded" className="flex-1" style={{ height: `${h}%` }} />
+            ))}
+          </div>
+        </div>
+
+        {/* Lists Skeleton */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Skeleton variant="circular" width={20} height={20} />
+                <Skeleton height={20} width="50%" />
+              </div>
+              <div className="space-y-2">
+                {[1, 2, 3].map((j) => (
+                  <SkeletonListItem key={j} />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -203,9 +270,16 @@ export function Dashboard() {
         iconColor="text-green-500"
         badge="Last 6 months"
       >
+        {contactsOverTime.length === 0 ? (
+          <div className="h-56 sm:h-72 flex flex-col items-center justify-center text-center">
+            <BarChart3 className="h-12 w-12 text-[hsl(var(--muted-foreground))] mb-3" />
+            <p className="text-[hsl(var(--muted-foreground))]">No contact data yet</p>
+            <p className="text-sm text-[hsl(var(--muted-foreground))]">Start adding contacts to see growth trends</p>
+          </div>
+        ) : (
         <div className="h-56 sm:h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={contactsOverTime}>
+            <AreaChart data={chartContacts}>
               <defs>
                 <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
@@ -244,6 +318,7 @@ export function Dashboard() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
+        )}
       </CollapsibleSection>
 
       {/* Charts - Stack on Mobile - Collapsible */}
@@ -253,9 +328,16 @@ export function Dashboard() {
           icon={Calendar}
           iconColor="text-blue-500"
         >
+          {meetingsChart.length === 0 ? (
+            <div className="h-56 sm:h-64 flex flex-col items-center justify-center text-center">
+              <Calendar className="h-12 w-12 text-[hsl(var(--muted-foreground))] mb-3" />
+              <p className="text-[hsl(var(--muted-foreground))]">No meetings recorded</p>
+              <p className="text-sm text-[hsl(var(--muted-foreground))]">Log meetings to track your activity</p>
+            </div>
+          ) : (
           <div className="h-56 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={meetingsChart}>
+              <BarChart data={chartMeetings}>
                 <XAxis
                   dataKey="week"
                   fontSize={12}
@@ -285,6 +367,7 @@ export function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+          )}
         </CollapsibleSection>
 
         <CollapsibleSection
@@ -292,11 +375,18 @@ export function Dashboard() {
           icon={Users}
           iconColor="text-purple-500"
         >
+          {mediumBreakdown.length === 0 ? (
+            <div className="h-56 sm:h-64 flex flex-col items-center justify-center text-center">
+              <Users className="h-12 w-12 text-[hsl(var(--muted-foreground))] mb-3" />
+              <p className="text-[hsl(var(--muted-foreground))]">No communication data</p>
+              <p className="text-sm text-[hsl(var(--muted-foreground))]">Record meetings to see your communication mix</p>
+            </div>
+          ) : (
           <div className="h-56 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={mediumBreakdown}
+                  data={chartMedium}
                   dataKey="count"
                   nameKey="medium"
                   cx="50%"
@@ -306,7 +396,7 @@ export function Dashboard() {
                   paddingAngle={3}
                   label={({ name }) => name}
                 >
-                  {mediumBreakdown.map((_, index) => (
+                  {chartMedium.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -320,6 +410,7 @@ export function Dashboard() {
               </PieChart>
             </ResponsiveContainer>
           </div>
+          )}
         </CollapsibleSection>
       </div>
 

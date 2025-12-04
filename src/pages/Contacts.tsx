@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Phone, Mail, MessageCircle, Users } from 'lucide-react';
-import { Button, Input, Card, Avatar, Badge, Modal } from '../components/ui';
+import { Plus, Search, Phone, Mail, MessageCircle, Users, Upload, UserPlus } from 'lucide-react';
+import { Button, Input, Card, Avatar, Badge, Modal, SkeletonContactCard } from '../components/ui';
 import { useContactStore } from '../store/contactStore';
 import { ContactForm } from '../components/contacts/ContactForm';
 import { openWhatsApp, openEmail, openPhoneCall } from '../utils/communication';
@@ -68,16 +68,38 @@ export function Contacts() {
 
       {/* Contacts Grid */}
       {isLoading ? (
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[hsl(var(--primary))] border-t-transparent" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <SkeletonContactCard key={i} />
+          ))}
         </div>
+      ) : contacts.length === 0 ? (
+        <Card className="p-12">
+          <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto">
+            <div className="w-20 h-20 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center mb-4">
+              <Users className="h-10 w-10 text-[hsl(var(--primary))]" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Welcome to Nu-Connect!</h3>
+            <p className="text-[hsl(var(--muted-foreground))] mb-6">
+              Start building your network by adding your first contact or importing your existing contacts.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <Button onClick={() => setShowAddModal(true)} className="gap-2">
+                <UserPlus className="h-4 w-4" /> Add Contact
+              </Button>
+              <Button variant="outline" className="gap-2">
+                <Upload className="h-4 w-4" /> Import Contacts
+              </Button>
+            </div>
+          </div>
+        </Card>
       ) : filteredContacts.length === 0 ? (
         <Card className="p-12">
           <div className="flex flex-col items-center justify-center text-center">
-            <Users className="h-12 w-12 text-[hsl(var(--muted-foreground))] mb-3" />
-            <p className="text-[hsl(var(--muted-foreground))]">No contacts found</p>
-            <Button className="mt-4" onClick={() => setShowAddModal(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add your first contact
+            <Search className="h-12 w-12 text-[hsl(var(--muted-foreground))] mb-3" />
+            <p className="text-[hsl(var(--muted-foreground))]">No contacts match your search</p>
+            <Button variant="ghost" className="mt-4" onClick={() => { setSearchQuery(''); setSelectedTags([]); }}>
+              Clear filters
             </Button>
           </div>
         </Card>
