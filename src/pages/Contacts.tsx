@@ -1,15 +1,32 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Search, Phone, Mail, MessageCircle, Users, Upload, UserPlus, Trash2, CheckSquare, Square, X, Loader2, Gift, Calendar } from 'lucide-react';
+import { Plus, Search, Phone, Mail, MessageCircle, Users, Upload, UserPlus, Trash2, CheckSquare, Square, X, Loader2, Gift, Calendar, Clock, History } from 'lucide-react';
 import { Button, Input, Card, Avatar, Badge, Modal, SkeletonContactCard } from '../components/ui';
 import { useContactStore } from '../store/contactStore';
 import { ContactForm } from '../components/contacts/ContactForm';
 import { openWhatsApp, openEmail, openPhoneCall } from '../utils/communication';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
-import { getDaysUntil } from '../utils/dates';
+import { getDaysUntil, formatRelative } from '../utils/dates';
 import type { Contact } from '../types';
 
-type FilterType = 'all' | 'birthdays' | 'anniversaries';
+type FilterType = 'all' | 'birthdays' | 'anniversaries' | 'recent' | 'today' | 'week' | 'month';
+
+// Helper to check if date is within a time range
+const isWithinDays = (dateStr: string | undefined, days: number) => {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffTime = now.getTime() - date.getTime();
+  const diffDays = diffTime / (1000 * 60 * 60 * 24);
+  return diffDays >= 0 && diffDays <= days;
+};
+
+const isToday = (dateStr: string | undefined) => {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  const now = new Date();
+  return date.toDateString() === now.toDateString();
+};
 
 export function Contacts() {
   const { contacts, isLoading, isLoadingMore, pagination, fetchContacts, loadMore, searchQuery, setSearchQuery, selectedTags, setSelectedTags, deleteContact } = useContactStore();
@@ -24,8 +41,8 @@ export function Contacts() {
       setShowAddModal(true);
       setSearchParams({});
     }
-    const filter = searchParams.get('filter');
-    if (filter === 'birthdays' || filter === 'anniversaries') {
+    const filter = searchParams.get('filter') as FilterType;
+    if (['birthdays', 'anniversaries', 'recent', 'today', 'week', 'month'].includes(filter)) {
       setActiveFilter(filter);
     }
   }, [searchParams, setSearchParams]);
@@ -93,6 +110,18 @@ export function Contacts() {
       if (activeFilter === 'anniversaries') {
         return matchesSearch && matchesTags && isUpcoming(contact.anniversary);
       }
+      if (activeFilter === 'today') {
+        return matchesSearch && matchesTags && isToday(contact.updatedAt);
+      }
+      if (activeFilter === 'week') {
+        return matchesSearch && matchesTags && isWithinDays(contact.updatedAt, 7);
+      }
+      if (activeFilter === 'month') {
+        return matchesSearch && matchesTags && isWithinDays(contact.updatedAt, 30);
+      }
+      if (activeFilter === 'recent') {
+        return matchesSearch && matchesTags && isWithinDays(contact.updatedAt, 7);
+      }
 
       return matchesSearch && matchesTags;
     })
@@ -103,6 +132,10 @@ export function Contacts() {
       }
       if (activeFilter === 'anniversaries' && a.anniversary && b.anniversary) {
         return getDaysUntil(a.anniversary) - getDaysUntil(b.anniversary);
+      }
+      // Sort by most recently updated for time-based filters
+      if (['recent', 'today', 'week', 'month'].includes(activeFilter)) {
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       }
       return 0;
     });
@@ -176,6 +209,28 @@ export function Contacts() {
             onClick={() => { setActiveFilter('anniversaries'); setSearchParams({ filter: 'anniversaries' }); }}
           >
             <Calendar className="h-4 w-4 mr-1" /> Upcoming Anniversaries
+          </Button>
+          <span className="hidden sm:block w-px h-6 bg-[hsl(var(--border))] self-center mx-1" />
+          <Button
+            size="sm"
+            variant={activeFilter === 'today' ? 'primary' : 'outline'}
+            onClick={() => { setActiveFilter('today'); setSearchParams({ filter: 'today' }); }}
+          >
+            <Clock className="h-4 w-4 mr-1" /> Today
+          </Button>
+          <Button
+            size="sm"
+            variant={activeFilter === 'week' ? 'primary' : 'outline'}
+            onClick={() => { setActiveFilter('week'); setSearchParams({ filter: 'week' }); }}
+          >
+            <History className="h-4 w-4 mr-1" /> This Week
+          </Button>
+          <Button
+            size="sm"
+            variant={activeFilter === 'month' ? 'primary' : 'outline'}
+            onClick={() => { setActiveFilter('month'); setSearchParams({ filter: 'month' }); }}
+          >
+            <History className="h-4 w-4 mr-1" /> This Month
           </Button>
         </div>
 
@@ -289,6 +344,7 @@ function ContactCard({
 }) {
   const showBirthdayBadge = activeFilter === 'birthdays' && contact.birthday;
   const showAnniversaryBadge = activeFilter === 'anniversaries' && contact.anniversary;
+  const showTimeBadge = ['today', 'week', 'month', 'recent'].includes(activeFilter);
   const daysUntil = showBirthdayBadge
     ? getDaysUntil(contact.birthday!)
     : showAnniversaryBadge
@@ -327,6 +383,16 @@ function ContactCard({
           </div>
         )}
 
+        {/* Updated time badge */}
+        {showTimeBadge && (
+          <div className="absolute top-3 right-3 z-10">
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {formatRelative(contact.updatedAt)}
+            </Badge>
+          </div>
+        )}
+
         <Link to={`/contacts/${contact.id}`} className="block p-4 group">
           <div className="flex items-start gap-4">
             <Avatar src={contact.profilePicture} name={contact.name} size="lg" />
@@ -346,7 +412,12 @@ function ContactCard({
                   💍 {new Date(contact.anniversary!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </p>
               )}
-              {contact.tags.length > 0 && !showBirthdayBadge && !showAnniversaryBadge && (
+              {showTimeBadge && (
+                <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                  Updated {formatRelative(contact.updatedAt)}
+                </p>
+              )}
+              {contact.tags.length > 0 && !showBirthdayBadge && !showAnniversaryBadge && !showTimeBadge && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {contact.tags.slice(0, 3).map((tag) => (
                     <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
