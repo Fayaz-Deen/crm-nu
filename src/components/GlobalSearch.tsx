@@ -113,7 +113,8 @@ export function GlobalSearch() {
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search contacts..."
+          placeholder="Search contacts... (Ctrl+K)"
+          data-global-search
           className="h-10 w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] pl-10 pr-10 text-sm outline-none transition-colors placeholder:text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/30 focus:border-[hsl(var(--ring))] focus:ring-1 focus:ring-[hsl(var(--ring))]"
         />
         {query && (

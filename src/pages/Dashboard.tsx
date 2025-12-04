@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Users, Calendar, Gift, Clock, AlertCircle, TrendingUp, ArrowUpRight, Sparkles, ChevronDown, BarChart3 } from 'lucide-react';
-import { Card, Avatar, Badge, Skeleton, SkeletonStatCard, SkeletonListItem } from '../components/ui';
+import { Link, useNavigate } from 'react-router-dom';
+import { Users, Calendar, Gift, Clock, AlertCircle, TrendingUp, ArrowUpRight, Sparkles, ChevronDown, BarChart3, Plus, UserPlus, CalendarPlus, CheckSquare, Zap } from 'lucide-react';
+import { Card, Avatar, Badge, Skeleton, SkeletonStatCard, SkeletonListItem, Button } from '../components/ui';
 import { dashboardApi } from '../services/api';
 import { formatRelative, formatBirthday, getDaysUntil } from '../utils/dates';
 import type { Contact, Meeting } from '../types';
@@ -127,6 +127,57 @@ const StatCard = ({ icon: Icon, label, value, color, trend }: {
   </Card>
 );
 
+// Quick Actions Component
+const QuickActions = () => {
+  const navigate = useNavigate();
+
+  const actions = [
+    {
+      icon: UserPlus,
+      label: 'Add Contact',
+      color: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400',
+      onClick: () => navigate('/contacts?action=add'),
+    },
+    {
+      icon: CalendarPlus,
+      label: 'New Event',
+      color: 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400',
+      onClick: () => navigate('/calendar?action=add'),
+    },
+    {
+      icon: CheckSquare,
+      label: 'New Task',
+      color: 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400',
+      onClick: () => navigate('/tasks?action=add'),
+    },
+  ];
+
+  return (
+    <Card variant="elevated" className="p-4 sm:p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Zap className="h-5 w-5 text-[hsl(var(--primary))]" />
+        <h3 className="font-semibold">Quick Actions</h3>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {actions.map((action) => (
+          <button
+            key={action.label}
+            onClick={action.onClick}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[hsl(var(--muted))]/50 hover:bg-[hsl(var(--muted))] transition-colors group"
+          >
+            <div className={`p-3 rounded-xl ${action.color} transition-transform group-hover:scale-110`}>
+              <action.icon className="h-5 w-5" />
+            </div>
+            <span className="text-xs font-medium text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--foreground))]">
+              {action.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+};
+
 export function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [meetingsChart, setMeetingsChart] = useState<{ week: string; count: number }[]>([]);
@@ -234,6 +285,9 @@ export function Dashboard() {
           Here's what's happening with your network today.
         </p>
       </div>
+
+      {/* Quick Actions */}
+      <QuickActions />
 
       {/* Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 stagger-children">

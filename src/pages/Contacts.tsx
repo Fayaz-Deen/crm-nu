@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Search, Phone, Mail, MessageCircle, Users, Upload, UserPlus } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Plus, Search, Phone, Mail, MessageCircle, Users, Upload, UserPlus, Trash2, Tag, MoreHorizontal, CheckSquare, Square, X } from 'lucide-react';
 import { Button, Input, Card, Avatar, Badge, Modal, SkeletonContactCard } from '../components/ui';
 import { useContactStore } from '../store/contactStore';
 import { ContactForm } from '../components/contacts/ContactForm';
@@ -8,12 +8,51 @@ import { openWhatsApp, openEmail, openPhoneCall } from '../utils/communication';
 import type { Contact } from '../types';
 
 export function Contacts() {
-  const { contacts, isLoading, fetchContacts, searchQuery, setSearchQuery, selectedTags, setSelectedTags } = useContactStore();
+  const { contacts, isLoading, fetchContacts, searchQuery, setSearchQuery, selectedTags, setSelectedTags, deleteContact } = useContactStore();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Handle action query param
+  useEffect(() => {
+    if (searchParams.get('action') === 'add') {
+      setShowAddModal(true);
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     fetchContacts();
   }, [fetchContacts]);
+
+  // Bulk selection handlers
+  const toggleSelectContact = (id: string) => {
+    setSelectedContacts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedContacts(new Set(filteredContacts.map(c => c.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedContacts(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedContacts.size} contacts? This cannot be undone.`)) return;
+    for (const id of selectedContacts) {
+      await deleteContact(id);
+    }
+    clearSelection();
+  };
 
   const allTags = [...new Set(contacts.flatMap((c) => c.tags))];
 
@@ -37,6 +76,28 @@ export function Contacts() {
           <Plus className="mr-2 h-4 w-4" /> Add Contact
         </Button>
       </div>
+
+      {/* Bulk Selection Bar */}
+      {selectedContacts.size > 0 && (
+        <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-[hsl(var(--primary))]/10 border border-[hsl(var(--primary))]/20 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">
+              {selectedContacts.size} selected
+            </span>
+            <Button size="sm" variant="ghost" onClick={selectAll}>
+              Select all ({filteredContacts.length})
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={handleBulkDelete} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+              <Trash2 className="h-4 w-4 mr-1" /> Delete
+            </Button>
+            <Button size="sm" variant="ghost" onClick={clearSelection}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="space-y-4">
@@ -106,7 +167,13 @@ export function Contacts() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredContacts.map((contact) => (
-            <ContactCard key={contact.id} contact={contact} />
+            <ContactCard
+              key={contact.id}
+              contact={contact}
+              isSelected={selectedContacts.has(contact.id)}
+              onToggleSelect={() => toggleSelectContact(contact.id)}
+              selectionMode={selectedContacts.size > 0}
+            />
           ))}
         </div>
       )}
@@ -119,27 +186,58 @@ export function Contacts() {
   );
 }
 
-function ContactCard({ contact }: { contact: Contact }) {
+function ContactCard({
+  contact,
+  isSelected,
+  onToggleSelect,
+  selectionMode
+}: {
+  contact: Contact;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  selectionMode: boolean;
+}) {
   return (
-    <Card className="overflow-hidden transition-shadow hover:shadow-lg">
-      <Link to={`/contacts/${contact.id}`} className="block p-4">
-        <div className="flex items-start gap-4">
-          <Avatar src={contact.profilePicture} name={contact.name} size="lg" />
-          <div className="flex-1 overflow-hidden">
-            <h3 className="truncate font-semibold">{contact.name}</h3>
-            {contact.company && (
-              <p className="truncate text-sm text-[hsl(var(--muted-foreground))]">{contact.company}</p>
-            )}
-            {contact.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {contact.tags.slice(0, 3).map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
-                ))}
-              </div>
-            )}
+    <Card className={`overflow-hidden transition-all hover:shadow-lg ${isSelected ? 'ring-2 ring-[hsl(var(--primary))]' : ''}`}>
+      <div className="relative">
+        {/* Selection checkbox */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            onToggleSelect();
+          }}
+          className={`absolute top-3 left-3 z-10 p-1 rounded-md transition-all ${
+            selectionMode || isSelected
+              ? 'opacity-100'
+              : 'opacity-0 group-hover:opacity-100'
+          } ${isSelected ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}
+        >
+          {isSelected ? (
+            <CheckSquare className="h-5 w-5" />
+          ) : (
+            <Square className="h-5 w-5" />
+          )}
+        </button>
+
+        <Link to={`/contacts/${contact.id}`} className="block p-4 group">
+          <div className="flex items-start gap-4">
+            <Avatar src={contact.profilePicture} name={contact.name} size="lg" />
+            <div className="flex-1 overflow-hidden">
+              <h3 className="truncate font-semibold">{contact.name}</h3>
+              {contact.company && (
+                <p className="truncate text-sm text-[hsl(var(--muted-foreground))]">{contact.company}</p>
+              )}
+              {contact.tags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {contact.tags.slice(0, 3).map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </Link>
+        </Link>
+      </div>
       <div className="flex border-t border-[hsl(var(--border))]">
         <button
           onClick={() => openPhoneCall(contact)}

@@ -1,12 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Rocket, CheckCircle2, Cake, Heart } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Rocket, CheckCircle2, Cake, Heart, Check, X } from 'lucide-react';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui';
 import { authApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+
+// Password strength calculation
+const getPasswordStrength = (password: string): { score: number; label: string; color: string } => {
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  if (score <= 2) return { score, label: 'Weak', color: 'bg-red-500' };
+  if (score <= 4) return { score, label: 'Medium', color: 'bg-yellow-500' };
+  return { score, label: 'Strong', color: 'bg-green-500' };
+};
+
+// Password requirements
+const passwordRequirements = [
+  { regex: /.{8,}/, label: 'At least 8 characters' },
+  { regex: /[A-Z]/, label: 'One uppercase letter' },
+  { regex: /[a-z]/, label: 'One lowercase letter' },
+  { regex: /[0-9]/, label: 'One number' },
+  { regex: /[^A-Za-z0-9]/, label: 'One special character' },
+];
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -37,6 +61,7 @@ const features = [
 
 export function Register() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -45,10 +70,16 @@ export function Register() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
+    mode: 'onChange',
   });
+
+  // Watch password for real-time validation
+  const password = useWatch({ control, name: 'password', defaultValue: '' });
+  const passwordStrength = getPasswordStrength(password);
 
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true);
@@ -164,33 +195,80 @@ export function Register() {
                     />
                   </div>
 
-                  <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[hsl(var(--muted-foreground))] transition-colors group-focus-within:text-[hsl(var(--primary))]" />
-                    <Input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Password"
-                      className="pl-12 pr-12 h-12 text-base"
-                      {...register('password')}
-                      error={errors.password?.message}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
+                  <div className="space-y-2">
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[hsl(var(--muted-foreground))] transition-colors group-focus-within:text-[hsl(var(--primary))]" />
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Password"
+                        className="pl-12 pr-12 h-12 text-base"
+                        {...register('password')}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+
+                    {/* Password Strength Indicator */}
+                    {password && (
+                      <div className="space-y-2 animate-fade-in">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-[hsl(var(--muted))] rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${passwordStrength.color} transition-all duration-300`}
+                              style={{ width: `${(passwordStrength.score / 6) * 100}%` }}
+                            />
+                          </div>
+                          <span className={`text-xs font-medium ${
+                            passwordStrength.label === 'Weak' ? 'text-red-500' :
+                            passwordStrength.label === 'Medium' ? 'text-yellow-500' : 'text-green-500'
+                          }`}>
+                            {passwordStrength.label}
+                          </span>
+                        </div>
+
+                        {/* Password Requirements Checklist */}
+                        <div className="grid grid-cols-2 gap-1">
+                          {passwordRequirements.map((req) => {
+                            const met = req.regex.test(password);
+                            return (
+                              <div key={req.label} className="flex items-center gap-1.5 text-xs">
+                                {met ? (
+                                  <Check className="h-3.5 w-3.5 text-green-500" />
+                                ) : (
+                                  <X className="h-3.5 w-3.5 text-[hsl(var(--muted-foreground))]" />
+                                )}
+                                <span className={met ? 'text-green-600 dark:text-green-400' : 'text-[hsl(var(--muted-foreground))]'}>
+                                  {req.label}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[hsl(var(--muted-foreground))] transition-colors group-focus-within:text-[hsl(var(--primary))]" />
                     <Input
-                      type={showPassword ? 'text' : 'password'}
+                      type={showConfirmPassword ? 'text' : 'password'}
                       placeholder="Confirm password"
-                      className="pl-12 h-12 text-base"
+                      className="pl-12 pr-12 h-12 text-base"
                       {...register('confirmPassword')}
                       error={errors.confirmPassword?.message}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                   </div>
 
                   {/* Optional fields */}

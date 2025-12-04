@@ -8,3 +8,4 @@ export { Select } from './Select';
 export { Textarea } from './Textarea';
 export { ToastProvider, useToast, toast } from './Toast';
 export { Skeleton, SkeletonCard, SkeletonStatCard, SkeletonChart, SkeletonContactCard, SkeletonListItem, SkeletonTable } from './Skeleton';
+export { ThemeToggle } from './ThemeToggle';

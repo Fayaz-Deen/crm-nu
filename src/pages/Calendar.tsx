@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Video, Phone, MapPin, Clock, ExternalLink, Users, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, CloudOff, Info } from 'lucide-react';
 import { Button, Card, Modal, Input, Select, Textarea, Badge } from '../components/ui';
 import { useCalendarStore } from '../store/calendarStore';
@@ -28,6 +29,7 @@ export function Calendar() {
   const [showModal, setShowModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [view, setView] = useState<'upcoming' | 'month'>('upcoming');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -40,6 +42,14 @@ export function Calendar() {
     attendees: '',
     reminderMinutes: 15,
   });
+
+  // Handle action query param
+  useEffect(() => {
+    if (searchParams.get('action') === 'add') {
+      setShowModal(true);
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     fetchEvents();

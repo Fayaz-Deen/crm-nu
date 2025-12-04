@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, CheckCircle2, Circle, Clock, AlertTriangle, ChevronRight } from 'lucide-react';
 import { Button, Card, Modal, Input, Select, Textarea } from '../components/ui';
 import { useTaskStore } from '../store/taskStore';
@@ -24,6 +25,7 @@ export function Tasks() {
   const { contacts, fetchContacts } = useContactStore();
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'overdue' | 'completed'>('active');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -31,6 +33,14 @@ export function Tasks() {
     dueDate: '',
     contactId: '',
   });
+
+  // Handle action query param
+  useEffect(() => {
+    if (searchParams.get('action') === 'add') {
+      setShowModal(true);
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     fetchActive();
