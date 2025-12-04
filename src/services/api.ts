@@ -303,5 +303,15 @@ export const contactExportApi = {
     api.post<Contact>('/contacts/merge', { primaryId, mergeIds }),
 };
 
+// Global Search API
+// TODO: Future AI integration placeholder
+// - Add semantic search endpoint
+// - Add natural language query processing
+// - Add relevance-based result ranking
+export const searchApi = {
+  search: (query: string, limit = 20) =>
+    api.get<Contact[]>(`/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+};
+
 export { api };
 export default api;
