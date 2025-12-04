@@ -88,8 +88,8 @@ export const authApi = {
   login: (email: string, password: string) =>
     api.post<AuthResponse>('/auth/login', { email, password }),
 
-  register: (email: string, password: string, name: string) =>
-    api.post<AuthResponse>('/auth/register', { email, password, name }),
+  register: (email: string, password: string, name: string, birthday?: string, anniversary?: string) =>
+    api.post<AuthResponse>('/auth/register', { email, password, name, birthday, anniversary }),
 
   googleAuth: (params: { code?: string; idToken?: string; redirectUri?: string }) =>
     api.post<AuthResponse>('/auth/google', params),

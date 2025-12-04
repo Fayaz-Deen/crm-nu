@@ -3,16 +3,23 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Rocket, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Rocket, CheckCircle2, Cake, Heart } from 'lucide-react';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui';
 import { authApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
   confirmPassword: z.string(),
+  birthday: z.string().optional(),
+  anniversary: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
@@ -47,7 +54,13 @@ export function Register() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await authApi.register(data.email, data.password, data.name);
+      const response = await authApi.register(
+        data.email,
+        data.password,
+        data.name,
+        data.birthday || undefined,
+        data.anniversary || undefined
+      );
       setAuth(response.user, response.token, response.refreshToken);
       navigate('/dashboard');
     } catch (err) {
@@ -178,6 +191,31 @@ export function Register() {
                       {...register('confirmPassword')}
                       error={errors.confirmPassword?.message}
                     />
+                  </div>
+
+                  {/* Optional fields */}
+                  <div className="pt-2">
+                    <p className="text-xs text-[hsl(var(--muted-foreground))] mb-3">Optional - we'll remind you!</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="relative group">
+                        <Cake className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[hsl(var(--muted-foreground))] transition-colors group-focus-within:text-[hsl(var(--primary))]" />
+                        <Input
+                          type="date"
+                          placeholder="Birthday"
+                          className="pl-10 h-11 text-sm"
+                          {...register('birthday')}
+                        />
+                      </div>
+                      <div className="relative group">
+                        <Heart className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[hsl(var(--muted-foreground))] transition-colors group-focus-within:text-[hsl(var(--primary))]" />
+                        <Input
+                          type="date"
+                          placeholder="Anniversary"
+                          className="pl-10 h-11 text-sm"
+                          {...register('anniversary')}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 

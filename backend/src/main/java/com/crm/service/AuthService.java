@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -56,6 +57,8 @@ public class AuthService {
                 .name(request.getName())
                 .timezone(java.util.TimeZone.getDefault().getID())
                 .settings("{\"birthdayReminderDays\":2,\"anniversaryReminderDays\":2,\"defaultFollowupDays\":7,\"theme\":\"system\",\"notificationPrefs\":{\"push\":true,\"email\":true}}")
+                .birthday(request.getBirthday() != null && !request.getBirthday().isEmpty() ? LocalDate.parse(request.getBirthday()) : null)
+                .anniversary(request.getAnniversary() != null && !request.getAnniversary().isEmpty() ? LocalDate.parse(request.getAnniversary()) : null)
                 .emailVerified(false)
                 .verificationToken(verificationToken)
                 .verificationTokenExpiry(tokenExpiry)

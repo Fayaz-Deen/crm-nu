@@ -4,6 +4,7 @@ import javax.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.GenericGenerator;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -22,6 +23,8 @@ public class User {
     private String name;
     private String profilePicture;
     private String timezone;
+    private LocalDate birthday;
+    private LocalDate anniversary;
 
     @Column(columnDefinition = "TEXT")
     private String settings;
@@ -53,6 +56,10 @@ public class User {
     public void setProfilePicture(String profilePicture) { this.profilePicture = profilePicture; }
     public String getTimezone() { return timezone; }
     public void setTimezone(String timezone) { this.timezone = timezone; }
+    public LocalDate getBirthday() { return birthday; }
+    public void setBirthday(LocalDate birthday) { this.birthday = birthday; }
+    public LocalDate getAnniversary() { return anniversary; }
+    public void setAnniversary(LocalDate anniversary) { this.anniversary = anniversary; }
     public String getSettings() { return settings; }
     public void setSettings(String settings) { this.settings = settings; }
     public boolean isEmailVerified() { return emailVerified; }
@@ -75,6 +82,8 @@ public class User {
         public Builder settings(String s) { user.settings = s; return this; }
         public Builder profilePicture(String p) { user.profilePicture = p; return this; }
         public Builder googleId(String g) { user.googleId = g; return this; }
+        public Builder birthday(LocalDate b) { user.birthday = b; return this; }
+        public Builder anniversary(LocalDate a) { user.anniversary = a; return this; }
         public Builder emailVerified(boolean v) { user.emailVerified = v; return this; }
         public Builder verificationToken(String t) { user.verificationToken = t; return this; }
         public Builder verificationTokenExpiry(LocalDateTime e) { user.verificationTokenExpiry = e; return this; }
