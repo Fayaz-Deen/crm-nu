@@ -8,13 +8,14 @@ import { ContactForm } from '../components/contacts/ContactForm';
 import { MeetingForm } from '../components/meetings/MeetingForm';
 import { MeetingTimeline } from '../components/meetings/MeetingTimeline';
 import ShareContactModal from '../components/contacts/ShareContactModal';
+import { ProfileCompleteness } from '../components/contacts/ProfileCompleteness';
 import { openWhatsApp, openEmail, openInstagram, openPhoneCall, getDefaultMessage } from '../utils/communication';
 import { formatBirthday, formatRelative } from '../utils/dates';
 
 export function ContactDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { selectedContact, getContact, deleteContact, isLoading } = useContactStore();
+  const { selectedContact, getContact, deleteContact, addToRecentlyViewed, isLoading } = useContactStore();
   const { meetings, fetchMeetings } = useMeetingStore();
   const [showEditModal, setShowEditModal] = useState(false);
   const [showMeetingModal, setShowMeetingModal] = useState(false);
@@ -27,6 +28,13 @@ export function ContactDetail() {
       fetchMeetings(id);
     }
   }, [id, getContact, fetchMeetings]);
+
+  // Track recently viewed
+  useEffect(() => {
+    if (selectedContact) {
+      addToRecentlyViewed(selectedContact);
+    }
+  }, [selectedContact, addToRecentlyViewed]);
 
   const handleDelete = async () => {
     if (id) {
@@ -134,6 +142,11 @@ export function ContactDetail() {
                   <p className="text-sm text-[hsl(var(--muted-foreground))]">{contact.notes}</p>
                 </div>
               )}
+
+              {/* Profile Completeness */}
+              <div className="mt-4 border-t border-[hsl(var(--border))] pt-4">
+                <ProfileCompleteness contact={contact} />
+              </div>
 
               {/* Edit/Delete/Share */}
               <div className="mt-6 flex gap-2 border-t border-[hsl(var(--border))] pt-6">

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, CheckCircle2, Circle, Clock, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Clock, AlertTriangle, ChevronRight, Repeat } from 'lucide-react';
 import { Button, Card, Modal, Input, Select, Textarea } from '../components/ui';
 import { useTaskStore } from '../store/taskStore';
 import { useContactStore } from '../store/contactStore';
-import type { Task, TaskPriority, TaskStatus } from '../types';
+import type { Task, TaskPriority, TaskStatus, RecurrenceType } from '../types';
 
 const priorityColors: Record<TaskPriority, string> = {
   LOW: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
@@ -32,6 +32,8 @@ export function Tasks() {
     priority: 'MEDIUM' as TaskPriority,
     dueDate: '',
     contactId: '',
+    recurrence: 'NONE' as RecurrenceType,
+    recurrenceEndDate: '',
   });
 
   // Handle action query param
@@ -53,9 +55,11 @@ export function Tasks() {
     await createTask({
       ...formData,
       contactId: formData.contactId || undefined,
+      recurrence: formData.recurrence !== 'NONE' ? formData.recurrence : undefined,
+      recurrenceEndDate: formData.recurrenceEndDate || undefined,
     });
     setShowModal(false);
-    setFormData({ title: '', description: '', priority: 'MEDIUM', dueDate: '', contactId: '' });
+    setFormData({ title: '', description: '', priority: 'MEDIUM', dueDate: '', contactId: '', recurrence: 'NONE', recurrenceEndDate: '' });
   };
 
   const filteredTasks = tasks.filter((task) => {
@@ -182,6 +186,12 @@ export function Tasks() {
                         {task.contactName}
                       </span>
                     )}
+                    {task.recurrence && task.recurrence !== 'NONE' && (
+                      <span className="flex items-center gap-1 text-purple-500">
+                        <Repeat className="h-3 w-3" />
+                        {task.recurrence.charAt(0) + task.recurrence.slice(1).toLowerCase()}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -237,6 +247,44 @@ export function Tasks() {
               </option>
             ))}
           </Select>
+
+          {/* Recurrence Section */}
+          <div className="border-t border-[hsl(var(--border))] pt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Repeat className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+              <span className="text-sm font-medium">Repeat Task</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Recurrence"
+                value={formData.recurrence}
+                onChange={(e) => setFormData({ ...formData, recurrence: e.target.value as RecurrenceType })}
+              >
+                <option value="NONE">No repeat</option>
+                <option value="DAILY">Daily</option>
+                <option value="WEEKLY">Weekly</option>
+                <option value="BIWEEKLY">Every 2 weeks</option>
+                <option value="MONTHLY">Monthly</option>
+                <option value="QUARTERLY">Quarterly</option>
+                <option value="YEARLY">Yearly</option>
+              </Select>
+              {formData.recurrence !== 'NONE' && (
+                <Input
+                  type="date"
+                  label="End Date (optional)"
+                  value={formData.recurrenceEndDate}
+                  onChange={(e) => setFormData({ ...formData, recurrenceEndDate: e.target.value })}
+                  min={formData.dueDate}
+                />
+              )}
+            </div>
+            {formData.recurrence !== 'NONE' && (
+              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-2">
+                When you complete this task, a new one will be created for the next occurrence.
+              </p>
+            )}
+          </div>
+
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setShowModal(false)}>
               Cancel

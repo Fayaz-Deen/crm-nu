@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, Calendar, Gift, Clock, AlertCircle, TrendingUp, ArrowUpRight, Sparkles, ChevronDown, BarChart3, UserPlus, CalendarPlus, CheckSquare, Zap, Loader2 } from 'lucide-react';
+import { Users, Calendar, Gift, Clock, AlertCircle, TrendingUp, ArrowUpRight, Sparkles, ChevronDown, BarChart3, UserPlus, CalendarPlus, CheckSquare, Zap, Loader2, Eye, Activity as ActivityIcon, MessageCircle } from 'lucide-react';
 import { Card, Avatar, Badge, Skeleton, SkeletonStatCard, SkeletonListItem } from '../components/ui';
-import { dashboardApi } from '../services/api';
+import { dashboardApi, activityApi } from '../services/api';
 import { formatRelative, formatBirthday, getDaysUntil } from '../utils/dates';
-import type { Contact, Meeting } from '../types';
+import type { Contact, Meeting, Activity } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart } from 'recharts';
 import { useAuthStore } from '../store/authStore';
+import { useContactStore } from '../store/contactStore';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -236,6 +237,73 @@ const QuickActions = () => {
   );
 };
 
+// Activity Feed Component
+const ActivityFeed = ({ activities }: { activities: Activity[] }) => {
+  if (activities.length === 0) {
+    return (
+      <div className="text-center py-6 text-[hsl(var(--muted-foreground))]">
+        <ActivityIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>No recent activity</p>
+      </div>
+    );
+  }
+
+  const getActivityIcon = (type: Activity['type']) => {
+    switch (type) {
+      case 'MEETING':
+        return <MessageCircle className="h-4 w-4" />;
+      case 'TASK':
+        return <CheckSquare className="h-4 w-4" />;
+      case 'CONTACT_CREATED':
+        return <UserPlus className="h-4 w-4" />;
+      default:
+        return <ActivityIcon className="h-4 w-4" />;
+    }
+  };
+
+  const getActivityColor = (type: Activity['type']) => {
+    switch (type) {
+      case 'MEETING':
+        return 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400';
+      case 'TASK':
+        return 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400';
+      case 'CONTACT_CREATED':
+        return 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
+      default:
+        return 'bg-gray-100 dark:bg-gray-900/50 text-gray-600 dark:text-gray-400';
+    }
+  };
+
+  return (
+    <div className="space-y-3 max-h-64 overflow-y-auto">
+      {activities.map((activity) => (
+        <div
+          key={activity.id}
+          className="flex items-start gap-3 p-2 rounded-lg hover:bg-[hsl(var(--accent))] transition-colors"
+        >
+          <div className={`p-2 rounded-lg shrink-0 ${getActivityColor(activity.type)}`}>
+            {getActivityIcon(activity.type)}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">{activity.description}</p>
+            {activity.contactName && (
+              <Link
+                to={`/contacts/${activity.contactId}`}
+                className="text-xs text-[hsl(var(--primary))] hover:underline"
+              >
+                {activity.contactName}
+              </Link>
+            )}
+            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+              {formatRelative(activity.timestamp)}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // Lazy loaded list for Birthdays
 const BirthdaysList = ({ contacts }: { contacts: Contact[] | undefined }) => {
   const { visibleItems, hasMore, loaderRef } = useLazyLoad(contacts);
@@ -341,8 +409,10 @@ export function Dashboard() {
   const [meetingsChart, setMeetingsChart] = useState<{ week: string; count: number }[]>([]);
   const [mediumBreakdown, setMediumBreakdown] = useState<{ medium: string; count: number }[]>([]);
   const [contactsOverTime, setContactsOverTime] = useState<{ month: string; count: number }[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuthStore();
+  const { recentlyViewed } = useContactStore();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -357,6 +427,14 @@ export function Dashboard() {
         setMeetingsChart(chartData);
         setMediumBreakdown(breakdownData);
         setContactsOverTime(contactsData);
+
+        // Fetch activities separately (may not exist yet)
+        try {
+          const activityData = await activityApi.getRecent(10);
+          setActivities(activityData);
+        } catch {
+          // Activity endpoint may not exist
+        }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
       } finally {
@@ -446,6 +524,42 @@ export function Dashboard() {
 
       {/* Quick Actions */}
       <QuickActions />
+
+      {/* Recently Viewed & Activity Feed */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Recently Viewed */}
+        {recentlyViewed.length > 0 && (
+          <Card variant="elevated" className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Eye className="h-5 w-5 text-[hsl(var(--primary))]" />
+              <h3 className="font-semibold">Recently Viewed</h3>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+              {recentlyViewed.map((contact) => (
+                <Link
+                  key={contact.id}
+                  to={`/contacts/${contact.id}`}
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[hsl(var(--muted))]/50 hover:bg-[hsl(var(--muted))] transition-colors min-w-[80px] group"
+                >
+                  <Avatar src={contact.profilePicture} name={contact.name} size="md" />
+                  <span className="text-xs font-medium text-center truncate w-full group-hover:text-[hsl(var(--primary))]">
+                    {contact.name.split(' ')[0]}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Activity Feed */}
+        <Card variant="elevated" className="p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <ActivityIcon className="h-5 w-5 text-[hsl(var(--primary))]" />
+            <h3 className="font-semibold">Recent Activity</h3>
+          </div>
+          <ActivityFeed activities={activities} />
+        </Card>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 stagger-children">

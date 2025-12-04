@@ -3,17 +3,23 @@ import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface Toast {
   id: string;
   type: ToastType;
   title: string;
   message?: string;
   duration?: number;
+  action?: ToastAction;
 }
 
 interface ToastContextValue {
   toasts: Toast[];
-  addToast: (toast: Omit<Toast, 'id'>) => void;
+  addToast: (toast: Omit<Toast, 'id'>) => string;
   removeToast: (id: string) => void;
 }
 
@@ -27,13 +33,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const newToast = { ...toast, id };
     setToasts((prev) => [...prev, newToast]);
 
-    // Auto remove after duration
-    const duration = toast.duration ?? 5000;
+    // Auto remove after duration (longer if has action)
+    const duration = toast.duration ?? (toast.action ? 8000 : 5000);
     if (duration > 0) {
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
       }, duration);
     }
+    return id;
   }, []);
 
   const removeToast = useCallback((id: string) => {
@@ -90,6 +97,18 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
     warning: 'text-yellow-500',
   };
 
+  const actionColors = {
+    success: 'bg-green-600 hover:bg-green-700 text-white',
+    error: 'bg-red-600 hover:bg-red-700 text-white',
+    info: 'bg-blue-600 hover:bg-blue-700 text-white',
+    warning: 'bg-yellow-600 hover:bg-yellow-700 text-white',
+  };
+
+  const handleAction = () => {
+    toast.action?.onClick();
+    onClose();
+  };
+
   return (
     <div
       className={`
@@ -107,6 +126,14 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
         <p className="font-semibold">{toast.title}</p>
         {toast.message && (
           <p className="text-sm opacity-80 mt-0.5">{toast.message}</p>
+        )}
+        {toast.action && (
+          <button
+            onClick={handleAction}
+            className={`mt-2 px-3 py-1 text-sm font-medium rounded-lg transition-colors ${actionColors[toast.type]}`}
+          >
+            {toast.action.label}
+          </button>
         )}
       </div>
       <button

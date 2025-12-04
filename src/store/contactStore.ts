@@ -13,6 +13,7 @@ interface PaginationState {
 interface ContactState {
   contacts: Contact[];
   selectedContact: Contact | null;
+  recentlyViewed: Contact[];
   isLoading: boolean;
   isLoadingMore: boolean;
   error: string | null;
@@ -24,7 +25,10 @@ interface ContactState {
   getContact: (id: string) => Promise<Contact | null>;
   createContact: (contact: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Contact>;
   updateContact: (id: string, contact: Partial<Contact>) => Promise<Contact>;
-  deleteContact: (id: string) => Promise<void>;
+  deleteContact: (id: string) => Promise<Contact | null>;
+  restoreContact: (contact: Contact) => Promise<void>;
+  bulkAddTags: (ids: string[], tags: string[]) => Promise<void>;
+  addToRecentlyViewed: (contact: Contact) => void;
   setSelectedContact: (contact: Contact | null) => void;
   setSearchQuery: (query: string) => void;
   setSelectedTags: (tags: string[]) => void;
@@ -33,9 +37,12 @@ interface ContactState {
 
 const DEFAULT_PAGE_SIZE = 20;
 
+const MAX_RECENTLY_VIEWED = 10;
+
 export const useContactStore = create<ContactState>((set, get) => ({
   contacts: [],
   selectedContact: null,
+  recentlyViewed: [],
   isLoading: false,
   isLoadingMore: false,
   error: null,
@@ -197,10 +204,14 @@ export const useContactStore = create<ContactState>((set, get) => ({
   },
 
   deleteContact: async (id) => {
+    // Store the contact for potential undo
+    const deletedContact = get().contacts.find((c) => c.id === id) || null;
+
     // Optimistic delete - remove immediately
     set((state) => ({
       contacts: state.contacts.filter((c) => c.id !== id),
       selectedContact: state.selectedContact?.id === id ? null : state.selectedContact,
+      recentlyViewed: state.recentlyViewed.filter((c) => c.id !== id),
       pagination: {
         ...state.pagination,
         totalCount: Math.max(0, state.pagination.totalCount - 1),
@@ -221,6 +232,93 @@ export const useContactStore = create<ContactState>((set, get) => ({
         createdAt: new Date(),
       });
     }
+
+    return deletedContact;
+  },
+
+  restoreContact: async (contact) => {
+    // Re-create the contact
+    try {
+      const restored = await contactApi.create(contact);
+      await db.contacts.put(restored);
+      set((state) => ({
+        contacts: [restored, ...state.contacts],
+        pagination: {
+          ...state.pagination,
+          totalCount: state.pagination.totalCount + 1,
+        },
+      }));
+    } catch {
+      // For offline support
+      await db.contacts.put(contact);
+      await db.syncQueue.add({
+        type: 'create',
+        entity: 'contact',
+        entityId: contact.id,
+        data: contact as unknown as Record<string, unknown>,
+        createdAt: new Date(),
+      });
+      set((state) => ({
+        contacts: [contact, ...state.contacts],
+        pagination: {
+          ...state.pagination,
+          totalCount: state.pagination.totalCount + 1,
+        },
+      }));
+    }
+  },
+
+  bulkAddTags: async (ids, tagsToAdd) => {
+    // Optimistic update: add tags to contacts immediately
+    set((state) => ({
+      contacts: state.contacts.map((c) => {
+        if (ids.includes(c.id)) {
+          const newTags = [...new Set([...c.tags, ...tagsToAdd])];
+          return { ...c, tags: newTags, updatedAt: new Date().toISOString() };
+        }
+        return c;
+      }),
+    }));
+
+    try {
+      const updatedContacts = await contactApi.bulkAddTags(ids, tagsToAdd);
+      // Update with server response
+      for (const contact of updatedContacts) {
+        await db.contacts.put(contact);
+      }
+      set((state) => ({
+        contacts: state.contacts.map((c) => {
+          const updated = updatedContacts.find((u) => u.id === c.id);
+          return updated || c;
+        }),
+      }));
+    } catch {
+      // Keep optimistic update for offline support
+      const contacts = get().contacts;
+      for (const id of ids) {
+        const contact = contacts.find((c) => c.id === id);
+        if (contact) {
+          await db.contacts.put(contact);
+          await db.syncQueue.add({
+            type: 'update',
+            entity: 'contact',
+            entityId: id,
+            data: { tags: contact.tags } as unknown as Record<string, unknown>,
+            createdAt: new Date(),
+          });
+        }
+      }
+    }
+  },
+
+  addToRecentlyViewed: (contact) => {
+    set((state) => {
+      // Remove if already exists, then add to front
+      const filtered = state.recentlyViewed.filter((c) => c.id !== contact.id);
+      return {
+        recentlyViewed: [contact, ...filtered].slice(0, MAX_RECENTLY_VIEWED),
+      };
+    });
   },
 
   setSelectedContact: (contact) => set({ selectedContact: contact }),

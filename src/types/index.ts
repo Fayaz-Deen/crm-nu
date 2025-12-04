@@ -129,6 +129,7 @@ export interface ApiError {
 // Task types
 export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+export type RecurrenceType = 'NONE' | 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 
 export interface Task {
   id: string;
@@ -140,6 +141,9 @@ export interface Task {
   priority: TaskPriority;
   dueDate?: string;
   completedAt?: string;
+  recurrence?: RecurrenceType;
+  recurrenceEndDate?: string;
+  parentTaskId?: string;
   createdAt: string;
   updatedAt: string;
 }

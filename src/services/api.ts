@@ -130,6 +130,12 @@ export const contactApi = {
 
   delete: (id: string) => api.delete<void>(`/contacts/${id}`),
 
+  bulkUpdate: (ids: string[], data: Partial<Contact>) =>
+    api.put<Contact[]>('/contacts/bulk', { ids, ...data }),
+
+  bulkAddTags: (ids: string[], tags: string[]) =>
+    api.post<Contact[]>('/contacts/bulk/tags', { ids, tags }),
+
   search: (query: string, tags?: string[]) =>
     api.get<Contact[]>(`/contacts/search?q=${encodeURIComponent(query)}${tags?.length ? `&tags=${tags.join(',')}` : ''}`),
 

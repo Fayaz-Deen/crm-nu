@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Search, Phone, Mail, MessageCircle, Users, Upload, UserPlus, Trash2, CheckSquare, Square, X, Loader2, Gift, Calendar, Clock, History } from 'lucide-react';
+import { Plus, Search, Phone, Mail, MessageCircle, Users, Upload, UserPlus, Trash2, CheckSquare, Square, X, Loader2, Gift, Calendar, Clock, History, Tags, AlertCircle } from 'lucide-react';
 import { Button, Input, Card, Avatar, Badge, Modal, SkeletonContactCard } from '../components/ui';
 import { useContactStore } from '../store/contactStore';
 import { ContactForm } from '../components/contacts/ContactForm';
+import { ProfileCompletenessBadge } from '../components/contacts/ProfileCompleteness';
+import { calculateProfileCompleteness } from '../utils/profileCompleteness';
 import { openWhatsApp, openEmail, openPhoneCall } from '../utils/communication';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { getDaysUntil, formatRelative } from '../utils/dates';
+import { useToast } from '../components/ui/Toast';
 import type { Contact } from '../types';
 
-type FilterType = 'all' | 'birthdays' | 'anniversaries' | 'recent' | 'today' | 'week' | 'month';
+type FilterType = 'all' | 'birthdays' | 'anniversaries' | 'recent' | 'today' | 'week' | 'month' | 'incomplete';
 
 // Helper to check if date is within a time range
 const isWithinDays = (dateStr: string | undefined, days: number) => {
@@ -29,11 +32,15 @@ const isToday = (dateStr: string | undefined) => {
 };
 
 export function Contacts() {
-  const { contacts, isLoading, isLoadingMore, pagination, fetchContacts, loadMore, searchQuery, setSearchQuery, selectedTags, setSelectedTags, deleteContact } = useContactStore();
+  const { contacts, isLoading, isLoadingMore, pagination, fetchContacts, loadMore, searchQuery, setSearchQuery, selectedTags, setSelectedTags, deleteContact, restoreContact, bulkAddTags } = useContactStore();
+  const { addToast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showTagModal, setShowTagModal] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchParams, setSearchParams] = useSearchParams();
+  const [newTagInput, setNewTagInput] = useState('');
+  const [tagsToAssign, setTagsToAssign] = useState<string[]>([]);
 
   // Handle query params
   useEffect(() => {
@@ -42,7 +49,7 @@ export function Contacts() {
       setSearchParams({});
     }
     const filter = searchParams.get('filter') as FilterType;
-    if (['birthdays', 'anniversaries', 'recent', 'today', 'week', 'month'].includes(filter)) {
+    if (['birthdays', 'anniversaries', 'recent', 'today', 'week', 'month', 'incomplete'].includes(filter)) {
       setActiveFilter(filter);
     }
   }, [searchParams, setSearchParams]);
@@ -80,10 +87,66 @@ export function Contacts() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Delete ${selectedContacts.size} contacts? This cannot be undone.`)) return;
+    if (!confirm(`Delete ${selectedContacts.size} contacts?`)) return;
+
+    const deletedContacts: Contact[] = [];
     for (const id of selectedContacts) {
-      await deleteContact(id);
+      const deleted = await deleteContact(id);
+      if (deleted) deletedContacts.push(deleted);
     }
+    clearSelection();
+
+    // Show undo toast
+    if (deletedContacts.length > 0) {
+      addToast({
+        type: 'success',
+        title: `${deletedContacts.length} contact${deletedContacts.length > 1 ? 's' : ''} deleted`,
+        message: 'Click undo to restore',
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            for (const contact of deletedContacts) {
+              await restoreContact(contact);
+            }
+            addToast({
+              type: 'success',
+              title: 'Contacts restored',
+              message: `${deletedContacts.length} contact${deletedContacts.length > 1 ? 's' : ''} restored successfully`,
+            });
+          },
+        },
+      });
+    }
+  };
+
+  const handleOpenTagModal = () => {
+    setTagsToAssign([]);
+    setNewTagInput('');
+    setShowTagModal(true);
+  };
+
+  const handleAddTagToList = () => {
+    const trimmed = newTagInput.trim().toLowerCase();
+    if (trimmed && !tagsToAssign.includes(trimmed)) {
+      setTagsToAssign([...tagsToAssign, trimmed]);
+      setNewTagInput('');
+    }
+  };
+
+  const handleRemoveTagFromList = (tag: string) => {
+    setTagsToAssign(tagsToAssign.filter((t) => t !== tag));
+  };
+
+  const handleBulkTagAssign = async () => {
+    if (tagsToAssign.length === 0) return;
+
+    await bulkAddTags([...selectedContacts], tagsToAssign);
+    addToast({
+      type: 'success',
+      title: 'Tags assigned',
+      message: `Added ${tagsToAssign.length} tag${tagsToAssign.length > 1 ? 's' : ''} to ${selectedContacts.size} contact${selectedContacts.size > 1 ? 's' : ''}`,
+    });
+    setShowTagModal(false);
     clearSelection();
   };
 
@@ -122,6 +185,10 @@ export function Contacts() {
       if (activeFilter === 'recent') {
         return matchesSearch && matchesTags && isWithinDays(contact.updatedAt, 7);
       }
+      if (activeFilter === 'incomplete') {
+        const { percentage } = calculateProfileCompleteness(contact);
+        return matchesSearch && matchesTags && percentage < 80;
+      }
 
       return matchesSearch && matchesTags;
     })
@@ -136,6 +203,12 @@ export function Contacts() {
       // Sort by most recently updated for time-based filters
       if (['recent', 'today', 'week', 'month'].includes(activeFilter)) {
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      }
+      // Sort by completeness (lowest first) for incomplete filter
+      if (activeFilter === 'incomplete') {
+        const aComplete = calculateProfileCompleteness(a).percentage;
+        const bComplete = calculateProfileCompleteness(b).percentage;
+        return aComplete - bComplete;
       }
       return 0;
     });
@@ -165,6 +238,9 @@ export function Contacts() {
             </Button>
           </div>
           <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={handleOpenTagModal}>
+              <Tags className="h-4 w-4 mr-1" /> Add Tags
+            </Button>
             <Button size="sm" variant="outline" onClick={handleBulkDelete} className="text-red-600 hover:text-red-700 hover:bg-red-50">
               <Trash2 className="h-4 w-4 mr-1" /> Delete
             </Button>
@@ -231,6 +307,14 @@ export function Contacts() {
             onClick={() => { setActiveFilter('month'); setSearchParams({ filter: 'month' }); }}
           >
             <History className="h-4 w-4 mr-1" /> This Month
+          </Button>
+          <span className="hidden sm:block w-px h-6 bg-[hsl(var(--border))] self-center mx-1" />
+          <Button
+            size="sm"
+            variant={activeFilter === 'incomplete' ? 'primary' : 'outline'}
+            onClick={() => { setActiveFilter('incomplete'); setSearchParams({ filter: 'incomplete' }); }}
+          >
+            <AlertCircle className="h-4 w-4 mr-1" /> Incomplete Profiles
           </Button>
         </div>
 
@@ -325,6 +409,83 @@ export function Contacts() {
       <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Contact" size="lg">
         <ContactForm onSuccess={() => setShowAddModal(false)} />
       </Modal>
+
+      {/* Bulk Tag Assignment Modal */}
+      <Modal isOpen={showTagModal} onClose={() => setShowTagModal(false)} title={`Add Tags to ${selectedContacts.size} Contact${selectedContacts.size > 1 ? 's' : ''}`}>
+        <div className="space-y-4">
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+            Add one or more tags to the selected contacts. Existing tags will be preserved.
+          </p>
+
+          {/* Tag input */}
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter tag name..."
+              value={newTagInput}
+              onChange={(e) => setNewTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddTagToList();
+                }
+              }}
+            />
+            <Button onClick={handleAddTagToList} disabled={!newTagInput.trim()}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Existing tags quick-add */}
+          {allTags.length > 0 && (
+            <div>
+              <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2">Quick add from existing tags:</p>
+              <div className="flex flex-wrap gap-1">
+                {allTags.filter((t) => !tagsToAssign.includes(t)).slice(0, 10).map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="outline"
+                    className="cursor-pointer hover:bg-[hsl(var(--accent))]"
+                    onClick={() => setTagsToAssign([...tagsToAssign, tag])}
+                  >
+                    + {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tags to assign */}
+          {tagsToAssign.length > 0 && (
+            <div>
+              <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2">Tags to add:</p>
+              <div className="flex flex-wrap gap-1">
+                {tagsToAssign.map((tag) => (
+                  <Badge key={tag} variant="default" className="gap-1">
+                    {tag}
+                    <button
+                      onClick={() => handleRemoveTagFromList(tag)}
+                      className="ml-1 hover:text-red-300"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-4 border-t border-[hsl(var(--border))]">
+            <Button variant="outline" onClick={() => setShowTagModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBulkTagAssign} disabled={tagsToAssign.length === 0}>
+              <Tags className="h-4 w-4 mr-2" />
+              Add {tagsToAssign.length} Tag{tagsToAssign.length !== 1 ? 's' : ''}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -345,6 +506,7 @@ function ContactCard({
   const showBirthdayBadge = activeFilter === 'birthdays' && contact.birthday;
   const showAnniversaryBadge = activeFilter === 'anniversaries' && contact.anniversary;
   const showTimeBadge = ['today', 'week', 'month', 'recent'].includes(activeFilter);
+  const showIncompleteBadge = activeFilter === 'incomplete';
   const daysUntil = showBirthdayBadge
     ? getDaysUntil(contact.birthday!)
     : showAnniversaryBadge
@@ -393,6 +555,13 @@ function ContactCard({
           </div>
         )}
 
+        {/* Profile completeness badge */}
+        {showIncompleteBadge && (
+          <div className="absolute top-3 right-3 z-10">
+            <ProfileCompletenessBadge contact={contact} />
+          </div>
+        )}
+
         <Link to={`/contacts/${contact.id}`} className="block p-4 group">
           <div className="flex items-start gap-4">
             <Avatar src={contact.profilePicture} name={contact.name} size="lg" />
@@ -417,7 +586,12 @@ function ContactCard({
                   Updated {formatRelative(contact.updatedAt)}
                 </p>
               )}
-              {contact.tags.length > 0 && !showBirthdayBadge && !showAnniversaryBadge && !showTimeBadge && (
+              {showIncompleteBadge && (
+                <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                  Missing: {calculateProfileCompleteness(contact).missingFields.slice(0, 3).join(', ')}
+                </p>
+              )}
+              {contact.tags.length > 0 && !showBirthdayBadge && !showAnniversaryBadge && !showTimeBadge && !showIncompleteBadge && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {contact.tags.slice(0, 3).map((tag) => (
                     <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
