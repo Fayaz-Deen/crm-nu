@@ -157,6 +157,17 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
+/* Touch scrolling for mobile */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Prevent pull-to-refresh on PWA */
+html, body {
+  overscroll-behavior-y: contain;
+}
+
 /* Refined Animations - smoother and more subtle */
 @keyframes fadeIn {
   from { opacity: 0; }

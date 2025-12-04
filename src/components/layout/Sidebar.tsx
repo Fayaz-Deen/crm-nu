@@ -105,7 +105,10 @@ export function Sidebar() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto p-4">
+          <nav
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             <div className="space-y-1">
               {navItems.map((item, index) => (
                 <NavLink
