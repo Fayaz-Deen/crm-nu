@@ -17,7 +17,7 @@ public class Reminder {
     @Enumerated(EnumType.STRING) private ReminderStatus status = ReminderStatus.PENDING;
     @CreationTimestamp private LocalDateTime createdAt;
 
-    public enum ReminderType { BIRTHDAY, ANNIVERSARY, FOLLOWUP, NO_CONTACT }
+    public enum ReminderType { BIRTHDAY, ANNIVERSARY, FOLLOWUP, NO_CONTACT, SHARE }
     public enum ReminderStatus { PENDING, SENT, DISMISSED }
 
     public Reminder() {}

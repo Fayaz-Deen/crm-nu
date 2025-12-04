@@ -124,3 +124,85 @@ export interface ApiError {
   code?: string;
   details?: Record<string, string>;
 }
+
+// Task types
+export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  contactId?: string;
+  contactName?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskStats {
+  total: number;
+  pending: number;
+  inProgress: number;
+  completed: number;
+  overdue: number;
+  dueToday: number;
+}
+
+// Tag types
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  description?: string;
+  contactCount: number;
+  createdAt: string;
+}
+
+// Contact Group types
+export interface ContactGroup {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  contactIds: string[];
+  contactCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Calendar types
+export type CalendarEventType = 'MEETING' | 'CALL' | 'VIDEO_CALL' | 'FOLLOW_UP' | 'OTHER';
+export type CalendarEventStatus = 'SCHEDULED' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  contactId?: string;
+  contactName?: string;
+  startTime: string;
+  endTime: string;
+  location?: string;
+  meetLink?: string;
+  type: CalendarEventType;
+  status: CalendarEventStatus;
+  attendees: string[];
+  reminderMinutes?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Activity types
+export interface Activity {
+  id: string;
+  type: 'MEETING' | 'TASK' | 'CONTACT_CREATED';
+  description: string;
+  contactId?: string;
+  contactName?: string;
+  timestamp: string;
+  details?: Record<string, unknown>;
+}

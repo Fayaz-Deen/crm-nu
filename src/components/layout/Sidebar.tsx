@@ -10,6 +10,10 @@ import {
   X,
   Share2,
   FileText,
+  CheckSquare,
+  Video,
+  Tag,
+  FolderOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
@@ -18,8 +22,12 @@ import { Avatar } from '../ui/Avatar';
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/contacts', icon: Users, label: 'Contacts' },
+  { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
+  { to: '/calendar', icon: Video, label: 'Calendar' },
   { to: '/meetings', icon: Calendar, label: 'Meetings' },
   { to: '/reminders', icon: Bell, label: 'Reminders' },
+  { to: '/tags', icon: Tag, label: 'Tags' },
+  { to: '/groups', icon: FolderOpen, label: 'Groups' },
   { to: '/shared', icon: Share2, label: 'Shared' },
   { to: '/templates', icon: FileText, label: 'Templates' },
   { to: '/settings', icon: Settings, label: 'Settings' },

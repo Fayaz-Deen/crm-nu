@@ -99,6 +99,12 @@ public class ReminderService {
         reminderRepository.deleteByContactId(contactId);
     }
 
+    @Transactional
+    public void createShareNotification(String userId, String contactId) {
+        createReminder(userId, contactId, Reminder.ReminderType.SHARE,
+                LocalDateTime.now());
+    }
+
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void generateDailyReminders() {

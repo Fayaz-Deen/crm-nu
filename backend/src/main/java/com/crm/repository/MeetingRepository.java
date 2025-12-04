@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface MeetingRepository extends JpaRepository<Meeting, String> {
     List<Meeting> findByUserId(String userId);
+    List<Meeting> findByContactId(String contactId);
     List<Meeting> findByContactIdOrderByMeetingDateDesc(String contactId);
     List<Meeting> findByUserIdAndFollowupDateGreaterThanEqualOrderByFollowupDate(String userId, LocalDate date);
 

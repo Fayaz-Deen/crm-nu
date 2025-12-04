@@ -1,5 +1,6 @@
 package com.crm.service;
 
+import com.crm.dto.ContactDto;
 import com.crm.dto.ShareDto;
 import com.crm.entity.Contact;
 import com.crm.entity.Share;
@@ -11,6 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,12 +23,14 @@ public class ShareService {
     private final ShareRepository shareRepository;
     private final ContactRepository contactRepository;
     private final UserRepository userRepository;
+    private final ReminderService reminderService;
 
     public ShareService(ShareRepository shareRepository, ContactRepository contactRepository,
-                        UserRepository userRepository) {
+                        UserRepository userRepository, ReminderService reminderService) {
         this.shareRepository = shareRepository;
         this.contactRepository = contactRepository;
         this.userRepository = userRepository;
+        this.reminderService = reminderService;
     }
 
     @Transactional
@@ -57,6 +63,9 @@ public class ShareService {
         share.setNote(dto.getNote());
 
         share = shareRepository.save(share);
+
+        // Create notification for the user receiving the shared contact
+        reminderService.createShareNotification(sharedWithUser.getId(), dto.getContactId());
 
         User owner = userRepository.findById(ownerId).orElseThrow();
         return ShareDto.ShareResponse.from(share, contact.getName(), owner.getName(), owner.getEmail(),
@@ -139,5 +148,70 @@ public class ShareService {
                 owner != null ? owner.getEmail() : "Unknown",
                 sharedWith != null ? sharedWith.getName() : "Unknown",
                 sharedWith != null ? sharedWith.getEmail() : "Unknown");
+    }
+
+    public List<ContactDto> getSharedContactsWithMe(String userId) {
+        return shareRepository.findActiveSharesForUser(userId, LocalDateTime.now()).stream()
+                .map(share -> {
+                    Contact contact = contactRepository.findById(share.getContactId()).orElse(null);
+                    if (contact == null) return null;
+                    return toContactDto(contact);
+                })
+                .filter(dto -> dto != null)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void revokeShareByContactAndUser(String ownerId, String contactId, String sharedWithUserId) {
+        Share share = shareRepository.findByContactIdAndSharedWithUserId(contactId, sharedWithUserId)
+                .orElseThrow(() -> new RuntimeException("Share not found"));
+
+        if (!share.getOwnerUserId().equals(ownerId)) {
+            throw new RuntimeException("Only the owner can revoke a share");
+        }
+
+        shareRepository.delete(share);
+    }
+
+    private ContactDto toContactDto(Contact contact) {
+        ContactDto dto = new ContactDto();
+        dto.setId(contact.getId());
+        dto.setName(contact.getName());
+        dto.setEmails(parseJsonArray(contact.getEmails()));
+        dto.setPhones(parseJsonArray(contact.getPhones()));
+        dto.setWhatsappNumber(contact.getWhatsappNumber());
+        dto.setInstagramHandle(contact.getInstagramHandle());
+        dto.setCompany(contact.getCompany());
+        dto.setTags(parseJsonArray(contact.getTags()));
+        dto.setAddress(contact.getAddress());
+        dto.setNotes(contact.getNotes());
+        dto.setBirthday(contact.getBirthday() != null ? contact.getBirthday().toString() : null);
+        dto.setAnniversary(contact.getAnniversary() != null ? contact.getAnniversary().toString() : null);
+        dto.setProfilePicture(contact.getProfilePicture());
+        dto.setLastContactedAt(contact.getLastContactedAt() != null ?
+                contact.getLastContactedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);
+        dto.setCreatedAt(contact.getCreatedAt() != null ?
+                contact.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);
+        dto.setUpdatedAt(contact.getUpdatedAt() != null ?
+                contact.getUpdatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);
+        return dto;
+    }
+
+    private List<String> parseJsonArray(String json) {
+        if (json == null || json.isEmpty()) {
+            return Collections.emptyList();
+        }
+        // Simple JSON array parsing - remove brackets and split by comma
+        String trimmed = json.trim();
+        if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+            trimmed = trimmed.substring(1, trimmed.length() - 1);
+        }
+        if (trimmed.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(trimmed.split(","))
+                .map(s -> s.trim().replaceAll("^\"|\"$", ""))
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
     }
 }

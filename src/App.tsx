@@ -11,6 +11,10 @@ import { Reminders } from './pages/Reminders';
 import { Settings } from './pages/Settings';
 import SharedWithMe from './pages/SharedWithMe';
 import Templates from './pages/Templates';
+import { Tasks } from './pages/Tasks';
+import { Calendar } from './pages/Calendar';
+import { Tags } from './pages/Tags';
+import { Groups } from './pages/Groups';
 import { useAuthStore } from './store/authStore';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -40,8 +44,12 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="contacts" element={<Contacts />} />
           <Route path="contacts/:id" element={<ContactDetail />} />
+          <Route path="tasks" element={<Tasks />} />
+          <Route path="calendar" element={<Calendar />} />
           <Route path="meetings" element={<Meetings />} />
           <Route path="reminders" element={<Reminders />} />
+          <Route path="tags" element={<Tags />} />
+          <Route path="groups" element={<Groups />} />
           <Route path="shared" element={<SharedWithMe />} />
           <Route path="templates" element={<Templates />} />
           <Route path="settings" element={<Settings />} />
