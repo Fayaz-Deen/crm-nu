@@ -1,4 +1,4 @@
-import type { AuthResponse, Contact, Meeting, User, Reminder, Task, TaskStats, Tag, ContactGroup, CalendarEvent, Activity } from '../types';
+import type { AuthResponse, Contact, Meeting, User, Reminder, Task, TaskStats, Tag, ContactGroup, CalendarEvent, Activity, GoogleCalendarSyncStatus, GoogleCalendarSyncResult } from '../types';
 import { useAuthStore } from '../store/authStore';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -323,6 +323,24 @@ export const contactExportApi = {
 export const searchApi = {
   search: (query: string, limit = 20) =>
     api.get<Contact[]>(`/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+};
+
+// Google Calendar Sync API
+export const googleCalendarApi = {
+  getAuthUrl: (redirectUri?: string) =>
+    api.get<{ authUrl: string }>(`/calendar/google/auth-url${redirectUri ? `?redirectUri=${encodeURIComponent(redirectUri)}` : ''}`),
+
+  connect: (code: string, redirectUri?: string) =>
+    api.post<GoogleCalendarSyncStatus>('/calendar/google/connect', { code, redirectUri }),
+
+  disconnect: () =>
+    api.post<void>('/calendar/google/disconnect'),
+
+  getStatus: () =>
+    api.get<GoogleCalendarSyncStatus>('/calendar/google/status'),
+
+  triggerSync: () =>
+    api.post<GoogleCalendarSyncResult>('/calendar/google/sync'),
 };
 
 export { api };

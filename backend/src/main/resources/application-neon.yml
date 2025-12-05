@@ -51,16 +51,23 @@ jwt:
 
 app:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,https://fayaz-crm.vercel.app}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173,https://fayaz-crm.vercel.app}
   rate-limit:
     enabled: true
     requests-per-minute: 60
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
 
 logging:
   level:
     root: INFO
     com.crm: DEBUG
     org.hibernate.SQL: DEBUG
+
+google:
+  calendar:
+    enabled: true
+    sync-interval-minutes: 15
+    max-events-per-sync: 500
 
 springdoc:
   api-docs:

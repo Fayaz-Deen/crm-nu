@@ -13,6 +13,8 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, St
     List<CalendarEvent> findByUserIdAndContactId(String userId, String contactId);
     List<CalendarEvent> findByContactId(String contactId);
     Optional<CalendarEvent> findByExternalId(String externalId);
+    Optional<CalendarEvent> findByExternalIdAndUserId(String externalId, String userId);
+    List<CalendarEvent> findByUserIdAndExternalIdIsNull(String userId);
 
     @Query("SELECT e FROM CalendarEvent e WHERE e.userId = ?1 AND e.startTime >= ?2 AND e.startTime < ?3 ORDER BY e.startTime")
     List<CalendarEvent> findByUserIdAndDateRange(String userId, LocalDateTime start, LocalDateTime end);

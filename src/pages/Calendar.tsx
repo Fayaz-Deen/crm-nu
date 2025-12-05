@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Plus, Video, Phone, MapPin, Clock, ExternalLink, Users, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, CloudOff, Info } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Plus, Video, Phone, MapPin, Clock, ExternalLink, Users, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, CloudOff, Info, RefreshCw, CheckCircle2, Settings } from 'lucide-react';
 import { Button, Card, Modal, Input, Select, Textarea, Badge } from '../components/ui';
 import { useCalendarStore } from '../store/calendarStore';
 import { useContactStore } from '../store/contactStore';
-import { calendarApi } from '../services/api';
-import type { CalendarEvent, CalendarEventType } from '../types';
+import { calendarApi, googleCalendarApi } from '../services/api';
+import type { CalendarEvent, CalendarEventType, GoogleCalendarSyncStatus } from '../types';
 
 const eventTypeIcons: Record<CalendarEventType, React.ReactNode> = {
   VIDEO_CALL: <Video className="h-4 w-4" />,
@@ -30,6 +30,8 @@ export function Calendar() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [view, setView] = useState<'upcoming' | 'month'>('upcoming');
   const [searchParams, setSearchParams] = useSearchParams();
+  const [googleSyncStatus, setGoogleSyncStatus] = useState<GoogleCalendarSyncStatus | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -55,7 +57,31 @@ export function Calendar() {
     fetchEvents();
     fetchUpcoming(10);
     fetchContacts();
+    fetchGoogleStatus();
   }, [fetchEvents, fetchUpcoming, fetchContacts]);
+
+  const fetchGoogleStatus = async () => {
+    try {
+      const status = await googleCalendarApi.getStatus();
+      setGoogleSyncStatus(status);
+    } catch (error) {
+      console.error('Failed to fetch Google Calendar status:', error);
+    }
+  };
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      await googleCalendarApi.triggerSync();
+      await fetchEvents();
+      await fetchUpcoming(10);
+      await fetchGoogleStatus();
+    } catch (error) {
+      console.error('Sync failed:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,8 +161,40 @@ export function Calendar() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-[hsl(var(--background))] px-4 py-3 border-b border-[hsl(var(--border))]">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold">Calendar</h1>
           <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold">Calendar</h1>
+            {/* Google Sync Status Badge */}
+            {googleSyncStatus?.connected && (
+              <button
+                onClick={handleSync}
+                disabled={isSyncing}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                title={`Last synced: ${googleSyncStatus.lastSyncAt ? new Date(googleSyncStatus.lastSyncAt).toLocaleString() : 'Never'}`}
+              >
+                {isSyncing ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-3 w-3" />
+                )}
+                <span className="hidden sm:inline">Synced</span>
+              </button>
+            )}
+            {googleSyncStatus && !googleSyncStatus.connected && (
+              <Link
+                to="/settings?tab=integrations"
+                className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] text-xs font-medium hover:bg-[hsl(var(--accent))] transition-colors"
+              >
+                <Settings className="h-3 w-3" />
+                <span className="hidden sm:inline">Connect</span>
+              </Link>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {googleSyncStatus?.connected && (
+              <Button size="sm" variant="outline" onClick={handleSync} disabled={isSyncing}>
+                <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => setShowExportInfo(true)}>
               <Download className="h-4 w-4" />
             </Button>

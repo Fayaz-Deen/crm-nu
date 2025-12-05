@@ -211,3 +211,22 @@ export interface Activity {
   timestamp: string;
   details?: Record<string, unknown>;
 }
+
+// Google Calendar Sync types
+export interface GoogleCalendarSyncStatus {
+  connected: boolean;
+  syncEnabled: boolean;
+  lastSyncAt?: string;
+  status: 'NOT_CONNECTED' | 'CONNECTED' | 'SYNCED' | 'SYNC_FAILED' | 'NEVER_SYNCED';
+  primaryCalendarId?: string;
+  email?: string;
+  pendingChanges?: number;
+}
+
+export interface GoogleCalendarSyncResult {
+  eventsImported: number;
+  eventsExported: number;
+  conflicts: number;
+  syncedAt: string;
+  message: string;
+}

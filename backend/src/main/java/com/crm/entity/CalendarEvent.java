@@ -12,6 +12,9 @@ public class CalendarEvent {
     @Id @GenericGenerator(name = "uuid2", strategy = "uuid2") @GeneratedValue(generator = "uuid2")
     private String id;
     @Column(nullable = false) private String userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "userId", insertable = false, updatable = false)
+    private User user;
     private String contactId;
     @Column(nullable = false) private String title;
     @Column(columnDefinition = "TEXT") private String description;
@@ -67,4 +70,6 @@ public class CalendarEvent {
     public void setReminderMinutes(Integer reminderMinutes) { this.reminderMinutes = reminderMinutes; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; if (user != null) this.userId = user.getId(); }
 }
